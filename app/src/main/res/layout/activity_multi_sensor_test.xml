@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    tools:context="com.example.cyril.sensortagti.MultiSensorTestActivity">
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:text="Data Output"
+        android:id="@+id/outputTextView"
+        android:layout_below="@+id/DisconnectButton"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Scan Devices"
+        android:id="@+id/scanDevicesButton"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:onClick="initiateNewScan" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Connect to Devices"
+        android:id="@+id/connectDevicesButton"
+        android:layout_below="@+id/scanDevicesButton"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:onClick="connectAllLeDevice" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Create Sensors"
+        android:id="@+id/createSensorsButton"
+        android:layout_below="@+id/connectDevicesButton"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:onClick="createSensors" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Disconnect Devices"
+        android:id="@+id/DisconnectButton"
+        android:layout_below="@+id/createSensorsButton"
+        android:layout_alignParentStart="true"
+        android:layout_alignEnd="@+id/createSensorsButton"
+        android:nestedScrollingEnabled="false"
+        android:onClick="disconnectAllLeDevice" />
+</RelativeLayout>

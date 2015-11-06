@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SensorTagTI</string>
+    <!-- Bluetooth -->
+    <string name="ble_not_supported">BLE is not supported</string>
+    <string name="label_data">Data:</string>
+    <string name="label_device_address">Device address:</string>
+    <string name="label_state">State:</string>
+    <string name="no_data">No data</string>
+    <string name="no_unit">U</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="title_devices">BLE Device Scan</string>
+    <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
+    <!-- Drawer & Door -->
+    <string name="no_action">No action</string>
+    <string name="vibrating">Vibrating</string>
+    <string name="in_use">In use</string>
+    <string name="print">Print</string>
+    <string name="send">Send</string>
+    <!-- Bed & Couch -->
+    <string name="empty">Empty</string>
+    <!-- Light -->
+    <string name="light_off">Light off</string>
+    <!-- Fridge -->
+    <string name="closed">Closed</string>
+    <string name="opened">Opened</string>
+    <!-- Stove -->
+    <string name="stove_off">Stove off</string>
+    <string name="stove_on">Stove on</string>
+    <!-- Shower -->
+    <string name="shower_off">Shower off</string>
+    <string name="shower_on">Shower on</string>
+    <!-- Chooser -->
+    <string name="measurements">Measurements</string>
+    <string name="drawer_training">Drawer training</string>
+    <string name="drawer_recording">Drawer recording</string>
+    <string name="light_recording">Light recording</string>
+    <string name="door_training">Door training</string>
+    <string name="door_recording">Door recording</string>
+    <string name="bed_training">Bed training</string>
+    <string name="bed_recording">Bed recording</string>
+    <string name="couch_training">Couch training</string>
+    <string name="couch_recording">Couch recording</string>
+    <string name="fridge_training">Fridge training</string>
+    <string name="fridge_recording">Fridge recording</string>
+    <string name="stove_training">Stove training</string>
+    <string name="stove_recording">Stove recording</string>
+    <string name="shower_recording">Shower recording</string>
+    <!-- Services & Characteristics -->
+    <string name="unknown_device">Unknown device</string>
+    <string name="unknown_characteristic">Unknown characteristic</string>
+    <string name="unknown_service">Unknown service</string>
+
+    <!-- Menu items -->
+    <string name="menu_connect">Connect</string>
+    <string name="menu_disconnect">Disconnect</string>
+    <string name="menu_refresh">Refresh</string>
+    <string name="menu_scan">Scan</string>
+    <string name="menu_stop">Stop</string>
+    <string name="menu_multisensortest">Multi-sensor Test</string>
+    <string name="title_activity_device_control">DeviceControlActivity</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_drawer">DrawerActivity</string>
+    <string name="title_activity_drawer_recording">DrawerRecordingActivity</string>
+    <string name="title_activity_drawer_training">DrawerTrainingActivity</string>
+    <string name="title_activity_chooser">ChooserActivity</string>
+    <string name="title_activity_light_recording">LightRecordingActivity</string>
+    <string name="title_activity_door_training">DoorTrainingActivity</string>
+    <string name="title_activity_door_recording">DoorRecordingActivity</string>
+    <string name="title_activity_bed_training">BedTrainingActivity</string>
+    <string name="title_activity_bed_recording">BedRecordingActivity</string>
+    <string name="title_activity_couch_recording">CouchRecordingActivity</string>
+    <string name="title_activity_couch_training">CouchTrainingActivity</string>
+    <string name="title_activity_fridge_training">FridgeTrainingActivity</string>
+    <string name="title_activity_fridge_recording">FridgeRecordingActivity</string>
+    <string name="title_activity_stove_recording">StoveRecordingActivity</string>
+    <string name="title_activity_shower_recording">ShowerRecordingActivity</string>
+    <string name="title_activity_stove_training">StoveTrainingActivity</string>
+    <string name="title_activity_shower_training">ShowerTrainingActivity</string>
+    <string name="title_activity_multi_sensor_test">MultiSensorTestActivity</string>
+</resources>

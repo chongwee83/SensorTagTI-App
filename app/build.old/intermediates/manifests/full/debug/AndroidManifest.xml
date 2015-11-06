@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.cyril.sensortagti"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="18"
+        android:targetSdkVersion="22" />
+
+    <!-- Min/target SDK versions (<uses-sdk>) managed by build.gradle -->
+
+
+    <!--
+    Declare this required feature if you want to make the app available to BLE-capable
+    devices only.  If you want to make your app available to devices that don't support BLE,
+    you should omit this in the manifest.  Instead, determine BLE capability by using
+    PackageManager.hasSystemFeature(FEATURE_BLUETOOTH_LE)
+    -->
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@android:style/Theme.Holo.Light" >
+        <activity
+            android:name="com.example.cyril.sensortagti.DeviceScanActivity"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name="com.example.cyril.sensortagti.BluetoothLeService"
+            android:enabled="true" />
+
+        <activity
+            android:name="com.example.cyril.sensortagti.DeviceControlActivity"
+            android:label="@string/title_activity_device_control"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.DrawerRecordingActivity"
+            android:label="@string/title_activity_drawer_recording"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.DrawerTrainingActivity"
+            android:label="@string/title_activity_drawer_training"
+            android:parentActivityName="com.example.cyril.sensortagti.ChooserActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.ChooserActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.ChooserActivity"
+            android:label="@string/title_activity_chooser"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.LightRecordingActivity"
+            android:label="@string/title_activity_light_recording"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.DoorTrainingActivity"
+            android:label="@string/title_activity_door_training"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.DoorRecordingActivity"
+            android:label="@string/title_activity_door_recording"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.BedTrainingActivity"
+            android:label="@string/title_activity_bed_training"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.BedRecordingActivity"
+            android:label="@string/title_activity_bed_recording"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.CouchRecordingActivity"
+            android:label="@string/title_activity_couch_recording"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.CouchTrainingActivity"
+            android:label="@string/title_activity_couch_training"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.FridgeRecordingActivity"
+            android:label="@string/title_activity_fridge_recording"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.StoveRecordingActivity"
+            android:label="@string/title_activity_stove_recording"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.ShowerRecordingActivity"
+            android:label="@string/title_activity_shower_recording"
+            android:parentActivityName="com.example.cyril.sensortagti.DeviceScanActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.cyril.sensortagti.DeviceScanActivity" />
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.FridgeTrainingActivity"
+            android:label="@string/title_activity_fridge_training" >
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.StoveTrainingActivity"
+            android:label="@string/title_activity_stove_training" >
+        </activity>
+        <activity
+            android:name="com.example.cyril.sensortagti.ShowerTrainingActivity"
+            android:label="@string/title_activity_shower_training" >
+        </activity>
+    </application>
+
+</manifest>

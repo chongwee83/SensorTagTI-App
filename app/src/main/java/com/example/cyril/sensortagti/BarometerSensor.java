@@ -44,7 +44,7 @@ public class BarometerSensor extends Sensor
     @Override
     public String toString()
     {
-        return this.pressure+" mbar";
+        return "Pressure()," +this.pressure+" mbar";
     }
 
 }

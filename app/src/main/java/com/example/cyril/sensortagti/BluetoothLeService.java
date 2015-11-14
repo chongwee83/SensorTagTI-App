@@ -306,7 +306,6 @@ public class BluetoothLeService extends Service {
     /**
      * Writes a characteristic.
      */
-    //TODO: write charateristics to specific sensor
     public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic, String address)
     {
         return mBluetoothGattMap.get(address).writeCharacteristic(characteristic);
@@ -319,7 +318,6 @@ public class BluetoothLeService extends Service {
      * @param characteristic Characteristic to act on.
      * @param enabled If true, enable notification.  False otherwise.
      */
-    //TODO: set characteristic notification for specific sensor
     public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,boolean enabled,String address)
     {
         if (mBluetoothAdapter == null || !mBluetoothGattMap.containsKey(address))
@@ -333,7 +331,6 @@ public class BluetoothLeService extends Service {
     /**
      * Writes the Descriptor for the input characteristic.
      */
-    //TODO: write descriptor for specific sensor
     public void writeDescriptor(BluetoothGattCharacteristic characteristic,String address)
     {
         if (mBluetoothAdapter == null || !mBluetoothGattMap.containsKey(address))
@@ -352,7 +349,6 @@ public class BluetoothLeService extends Service {
      *
      * @return A {@code List} of supported services.
      */
-    //TODO: get supported gatt services for specific sensor
     public List<BluetoothGattService> getSupportedGattServices(String address)
     {
         if (mBluetoothAdapter == null || !mBluetoothGattMap.containsKey(address))
@@ -367,7 +363,6 @@ public class BluetoothLeService extends Service {
     /**
      * Retrieves the service corresponding to the input UUID.
      */
-    //TODO: get gatt service for specific sensor
     public BluetoothGattService getService(UUID servUuid,String address)
     {
         if (mBluetoothAdapter == null || !mBluetoothGattMap.containsKey(address))

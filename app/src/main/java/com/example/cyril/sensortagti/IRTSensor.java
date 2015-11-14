@@ -75,7 +75,7 @@ public class IRTSensor extends Sensor
     @Override
     public String toString()
     {
-        return "Ambient Temperature="+this.ambient+" C\nObject Temperature="+this.objectNew+" C";
+        return "Ambient Temp(C),"+this.ambient+",Object Temp(C),"+this.objectNew+",";
     }
 
 }

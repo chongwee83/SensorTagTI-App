@@ -68,7 +68,7 @@ public class DeviceControlActivity extends Activity
     private ArrayList<Sensor> sensors=new ArrayList<>();
 
     File csvPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-    File csvFile = new File(csvPath, "sensortag_output.csv");
+    File csvFile;
     CSVWriter writer;
 
     /**
@@ -91,6 +91,16 @@ public class DeviceControlActivity extends Activity
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             mBluetoothLeService = null;
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    //unable to close csv file
+                    e.printStackTrace();
+                    Log.e(TAG, "Unable to close output csv file.");
+                }
+            }
+
         }
     };
 
@@ -113,6 +123,18 @@ public class DeviceControlActivity extends Activity
                 mConnected = true;
                 updateConnectionState(R.string.connected);
                 invalidateOptionsMenu();
+                //create a new file for every new connection
+                csvFile = new File(csvPath, "sensortag_output_" + getCurrentTimeStampForFilename() + ".csv");
+                try {
+                    if (writer != null) {
+                        writer.close();
+                    }
+                    writer = new CSVWriter(new FileWriter(csvFile,false)); //set true to append, false to overwrite file
+                } catch (IOException e) {
+                    //unable to create/write to csv file
+                    e.printStackTrace();
+                    Log.e(TAG, "Unable to create output csv file.");
+                }
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action))
             {
                 mConnected = false;
@@ -233,14 +255,6 @@ public class DeviceControlActivity extends Activity
         // Bind BluetoothLeService.
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
-
-        try {
-            writer = new CSVWriter(new FileWriter(csvFile,true)); //set true to append, false to overwrite file
-        } catch (IOException e) {
-            //unable to create/write to csv file
-            e.printStackTrace();
-            Log.e(TAG, "Unable to create output csv file.");
-        }
     }
 
     @Override
@@ -380,5 +394,9 @@ public class DeviceControlActivity extends Activity
 
     public String getCurrentTimeStamp() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
+    }
+
+    public String getCurrentTimeStampForFilename() {
+        return new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
     }
 }

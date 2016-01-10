@@ -13,4 +13,7 @@
     <item android:id="@+id/menu_multisensortest"
         android:title="@string/menu_multisensortest"
         android:orderInCategory="102"/>
+    <item android:id="@+id/menu_multisensorcapture"
+        android:title="@string/menu_multisensorcapture"
+        android:orderInCategory="103"/>
 </menu>

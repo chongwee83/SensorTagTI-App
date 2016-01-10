@@ -167,6 +167,10 @@
             android:name=".MultiSensorTestActivity"
             android:label="@string/title_activity_multi_sensor_test" >
         </activity>
+        <activity
+            android:name=".MultiSensorDataCaptureActivity"
+            android:label="@string/title_activity_multi_sensor_datacapture" >
+        </activity>
     </application>
 
 </manifest>

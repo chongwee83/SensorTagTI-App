@@ -72,12 +72,14 @@ public class DeviceScanActivity extends ListActivity
             menu.findItem(R.id.menu_scan).setVisible(true);
             menu.findItem(R.id.menu_refresh).setActionView(null);
             menu.findItem(R.id.menu_multisensortest).setActionView(null);
+            menu.findItem(R.id.menu_multisensorcapture).setActionView(null);
         } else
         {
             menu.findItem(R.id.menu_stop).setVisible(true);
             menu.findItem(R.id.menu_scan).setVisible(false);
             menu.findItem(R.id.menu_refresh).setActionView(R.layout.actionbar_indeterminate_progress);
             menu.findItem(R.id.menu_multisensortest).setActionView(null);
+            menu.findItem(R.id.menu_multisensorcapture).setActionView(null);
         }
         return true;
     }
@@ -98,12 +100,26 @@ public class DeviceScanActivity extends ListActivity
             case R.id.menu_multisensortest:
                 startMultiSensorTest();
                 break;
+            case R.id.menu_multisensorcapture:
+                startMultiSensorDataCapture();
+                break;
         }
         return true;
     }
 
     private void startMultiSensorTest() {
         final Intent intent=new Intent(this,MultiSensorTestActivity.class);
+        if (mScanning)
+        {
+            //noinspection deprecation
+            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            mScanning = false;
+        }
+        startActivity(intent);
+    }
+
+    private void startMultiSensorDataCapture() {
+        final Intent intent=new Intent(this,MultiSensorDataCaptureActivity.class);
         if (mScanning)
         {
             //noinspection deprecation

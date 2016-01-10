@@ -31,7 +31,7 @@ public class HumiditySensor extends Sensor
     @Override
     public String toString()
     {
-        return this.humidity+" rH";
+        return "Humidity(rH)," + this.humidity+",";
     }
 
 }

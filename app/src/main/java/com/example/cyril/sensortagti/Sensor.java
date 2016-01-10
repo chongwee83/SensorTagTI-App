@@ -3,6 +3,7 @@ package com.example.cyril.sensortagti;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.util.UUID;
@@ -15,6 +16,8 @@ public abstract class Sensor
 
     private final static String TAG=Sensor.class.getSimpleName();
 
+    private SensorStatus status;
+
     // Indicator.
     public boolean wasInitialized=false;
     // Service & Characteristics UUIDs.
@@ -26,6 +29,7 @@ public abstract class Sensor
     // Special for motion sensor.
     public int measure; //1=acc,2=gyr,3=mag
     // Check for a received notification every second.
+
     private Handler handler;
     private boolean wasNotified;
     public void checkForNotification()
@@ -48,6 +52,8 @@ public abstract class Sensor
             }
         },1000);
     }
+
+
     public void receiveNotification()
     {
         this.wasNotified=true;
@@ -58,6 +64,7 @@ public abstract class Sensor
      */
     public void disable()
     {
+        //CW: Not sure if needed since we're moving away from buffering and downloading sensor readings
         this.handler.removeCallbacksAndMessages(null);
     }
 
@@ -70,6 +77,7 @@ public abstract class Sensor
         this.serviceUuid=serviceUuid;
         // Initialize the Bluetooth instances.
         this.mBluetoothLeService=mBluetoothLeService;
+
         // Initialize the device address
         this.mBluetoothLeDeviceAddress = address;
 
@@ -81,10 +89,13 @@ public abstract class Sensor
         unableNotifications();
         // Set this sensor's period.
         setPeriod();
+
         // Start the notifications checking.
-        this.handler=new Handler();
+        this.handler=new Handler(Looper.getMainLooper());
         this.wasNotified=false;
         checkForNotification();
+
+        status = new SensorStatus();
     }
 
     /**
@@ -184,4 +195,11 @@ public abstract class Sensor
         throw new UnsupportedOperationException("Error: shouldn't be called.");
     }
 
+    public SensorStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SensorStatus status) {
+        this.status = status;
+    }
 }

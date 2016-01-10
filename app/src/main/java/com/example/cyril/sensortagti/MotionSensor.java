@@ -72,8 +72,8 @@ public class MotionSensor extends Sensor
                 */
 
         return "Accelerometer(G),"+this.accelerometer.toString()+","
-                +"Gyroscope(uT),"+this.gyroscope.toString()+","
-                +"Magnetometer(deg/s),"+this.magnetometer.toString()+",";
+                +"Gyroscope(deg/s),"+this.gyroscope.toString()+","
+                +"Magnetometer(uT),"+this.magnetometer.toString()+",";
     }
 
 }

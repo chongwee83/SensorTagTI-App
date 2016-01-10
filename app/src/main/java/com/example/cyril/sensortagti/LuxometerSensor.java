@@ -38,7 +38,7 @@ public class LuxometerSensor extends Sensor
     @Override
     public String toString()
     {
-        return this.luxvalue+" Lux";
+        return "Lux,"+this.luxvalue+",";
     }
 
 }

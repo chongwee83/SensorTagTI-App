@@ -50,7 +50,7 @@ public abstract class Sensor
                     Log.w(TAG,mBluetoothLeDeviceAddress + ": Notifications received in last period");
                 wasNotified=false;
 
-                handler.postDelayed(this,1000);
+                handler.postDelayed(this,3000); //changed to 5 seconds since sensor periods were increased to 1 second
 
             }
         },1000);

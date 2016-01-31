@@ -16,6 +16,7 @@ public class BarometerSensor extends Sensor
     {
         super(serviceUuid,mBluetoothLeService,address);
         this.pressure=0.0;
+        this.setSensorType(SensorTagConfiguration.SensorType.PRESSURE);
     }
 
     @Override

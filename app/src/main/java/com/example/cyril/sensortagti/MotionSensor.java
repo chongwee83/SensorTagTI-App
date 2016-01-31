@@ -18,6 +18,7 @@ public class MotionSensor extends Sensor
         this.accelerometer=new Point3D(0.0,0.0,0.0);
         this.gyroscope=new Point3D(0.0,0.0,0.0);
         this.magnetometer=new Point3D(0.0,0.0,0.0);
+        this.setSensorType(SensorTagConfiguration.SensorType.MOTION);
     }
 
     @Override

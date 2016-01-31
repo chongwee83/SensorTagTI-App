@@ -2,7 +2,7 @@ package com.example.cyril.sensortagti;
 
 /**
  * Auto generated wrapper class for the data with 3 dimensions.
- * */
+ */
 public class Point3D {
 
     // Point parameters.
@@ -47,9 +47,10 @@ public class Point3D {
     }
 
     @Override
-    public String toString()
-    {
-        return this.x+","+this.y+","+this.z;
+    public String toString() {
+        return this.x + "," + this.y + "," + this.z;
+        //return String.format("%.5f", this.x) + "," + String.format("%.5f", this.y) + "," + String.format("%.5f", this.z);
+
     }
 
 }

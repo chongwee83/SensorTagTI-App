@@ -1,5 +1,8 @@
 package com.example.cyril.sensortagti;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -12,12 +15,13 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.opencsv.CSVWriter;
 
@@ -26,11 +30,14 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.lang.reflect.Array;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -46,20 +53,24 @@ public class BluetoothLeService extends Service {
     private Handler mHandler = new Handler();
 
     private static final long SCAN_PERIOD = 6000; // Stops scanning after 6 seconds.
-    private static final long SCAN_INTERVAL = 30000; // Performs automatic scans every 2 minutes.
-    private HashMap<String, BluetoothDevice> bleDeviceMap = new HashMap<String, BluetoothDevice>();
-    private HashMap<String, SensorTagConfiguration> bleTargetDevicesMap = new HashMap<String, SensorTagConfiguration>();
-    private HashMap<String, Sensor> sensors = new HashMap<String, Sensor>();
+    private static final long SCAN_INTERVAL = 60000; // Performs automatic scans every 1 minutes
+    private static final long SENSOR_INACTIVITY_THRESHOLD = 120000; // Set threshold for sensor inactivity to 2 minutes
+    private static final long FILE_SPLIT_INTERVAL = 7200000*6; // Set interval for file splitting to 12 hours
+    private static final long CSV_WRITE_INTERVAL = 300000;
+    private HashMap<String, BluetoothDevice> mBluetoothDeviceMap = new HashMap<String, BluetoothDevice>();
+    private HashMap<String, BluetoothGatt> mBluetoothGattMap = new HashMap<String, BluetoothGatt>();
+    private HashMap<String, SensorTagConfiguration> mBluetoothTargetDevicesMap = new HashMap<String, SensorTagConfiguration>();
+    private HashMap<String, ArrayList<Sensor>> mSensorsMap = new HashMap<String, ArrayList<Sensor>>();
     private boolean isAutomaticMode = false;
+    private boolean outputDebug = false;
+    private Date mFileCreatedTime;
+    private Date mFileLastWriteTime;
     File csvPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
     File csvFile;
     CSVWriter writer;
-
-    //private String mBluetoothDeviceAddress;
-    //private BluetoothGatt mBluetoothGatt;
-    private HashMap<String, BluetoothGatt> mBluetoothGattMap = new HashMap<String, BluetoothGatt>();
-    private ArrayList<String> mBluetoothDeviceAddressList = new ArrayList<String>();
-    //private boolean isAutomaticMode = false;
+    File debugFile;
+    CSVWriter debugWriter;
+    private ArrayList<String> csvBuffer = new ArrayList<String>();
 
     // Actions.
     public final static String ACTION_GATT_CONNECTED =
@@ -100,6 +111,12 @@ public class BluetoothLeService extends Service {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 Log.i(TAG, "Disconnected from GATT server.");
                 broadcastUpdate(intentAction);
+
+                String address = gatt.getDevice().getAddress();
+                if (outputDebug) {
+                    writeToDebugCSV(address + "," + "BluetoothGattCallback(STATE_DISCONNECTED)");
+                }
+                closeDevice(address);
             }
         }
 
@@ -115,6 +132,11 @@ public class BluetoothLeService extends Service {
                         isGood = false;
                 }
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 createSensors(gatt.getDevice());
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
@@ -201,6 +223,31 @@ public class BluetoothLeService extends Service {
         return super.onUnbind(intent);
     }
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+
+        if (outputDebug) {
+            writeToDebugCSV("NA," + "onStartCommand()");
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+        Boolean startInAutomaticMode = prefs.getBoolean("automaticModeEnabled", false);
+        if (startInAutomaticMode.booleanValue()) {
+            setAutomaticMode(true);
+        }
+
+        // If we get killed, after returning from here, restart
+        return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        writeToCSV();
+        if (outputDebug) {
+            writeToDebugCSV("NA," + "onDestroy()");
+        }
+    }
+
     private final IBinder mBinder = new LocalBinder();
 
     /**
@@ -243,26 +290,26 @@ public class BluetoothLeService extends Service {
             return false;
         }
         // Previously connected device.  Try to reconnect.
-        //if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress) && mBluetoothGatt != null)
-        if (mBluetoothDeviceAddressList.contains(address) && mBluetoothGattMap.containsKey(address)) {
+        if (mBluetoothDeviceMap.containsKey(address) && mBluetoothGattMap.containsKey(address)) {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
             BluetoothGatt gatt = mBluetoothGattMap.get(address);
             if (gatt.connect())
                 return true;
-            /*
-            if (mBluetoothGatt.connect())
-                return true;
-                */
         }
+
         final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         // We want to directly connect to the device, so we are setting the autoConnect
         // parameter to false.
 
         mBluetoothGattMap.put(address, device.connectGatt(this, false, mGattCallback));
-        //mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+
         Log.d(TAG, "Trying to create a new connection.");
-        mBluetoothDeviceAddressList.add(address);
-        //mBluetoothDeviceAddress = address;
+        mBluetoothDeviceMap.put(address, device);
+
+        if (outputDebug) {
+            writeToDebugCSV(address + "," + "connect()");
+        }
+
         return true;
     }
 
@@ -272,41 +319,80 @@ public class BluetoothLeService extends Service {
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      * callback.
      */
-    //TODO: allow disconnection of individual instances
     public void disconnect() {
-        // Shut down the relevant Bluetooth instances.
+        // Disconnect all relevant Bluetooth GATT instances.
         if (mBluetoothAdapter == null || mBluetoothGattMap.isEmpty()) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
+            Log.w(TAG, "Disconnect: BluetoothAdapter not initialized");
             return;
         }
 
         for (BluetoothGatt gatt : mBluetoothGattMap.values()) {
             gatt.disconnect();
         }
+    }
 
-        //mBluetoothGattMap.clear();
-        //mBluetoothDeviceAddressList.clear();
+    public void disconnectDevice(String address) {
+        // Disconnect the relevant Bluetooth GATT instance.
+        // Disconnect preserves the GATT service for use again, and results in a callback for DISCONNECTED
+        if (mBluetoothAdapter == null || mBluetoothGattMap.isEmpty()) {
+            Log.w(TAG, "DisconnectDevice: BluetoothAdapter not initialized");
+            return;
+        }
+
+        BluetoothGatt gatt = mBluetoothGattMap.get(address);
+        gatt.disconnect();
+
+        if (outputDebug) {
+            writeToDebugCSV(address + "," + "disconnectDevice()");
+        }
     }
 
     /**
      * After using a given BLE device, the app must call this method to ensure resources are
      * released properly.
      */
-    //TODO: allow closing of individual instances
     public void close() {
+        // Close all relevant Bluetooth instances.
         if (mBluetoothGattMap.isEmpty()) {
             return;
         }
 
-        for (BluetoothGatt gatt : mBluetoothGattMap.values()) {
-            gatt.close();
+        ArrayList<String> addresses = new ArrayList<String>();
+        for (String address : mBluetoothGattMap.keySet()) {
+            addresses.add(address);
+        }
+        for (String address : addresses) {
+            closeDevice(address);
+        }
+    }
+
+    public void closeDevice(String address) {
+        // Close the relevant Bluetooth instance.
+        // This is one level higher than disconnect and releases all resources (including the GATT service)
+        // However, it does not trigger a DISCONNECTED callback
+        if (mBluetoothGattMap.isEmpty()) {
+            return;
         }
 
-        mBluetoothGattMap.clear();
-        mBluetoothDeviceAddressList.clear();
+        BluetoothGatt gatt = mBluetoothGattMap.get(address);
+        gatt.close();
 
-        //mBluetoothGatt.close();
-        //mBluetoothGatt = null;
+        //clear out all existence of the remote device upon closure of the connection
+        mBluetoothGattMap.remove(address);
+        mBluetoothDeviceMap.remove(address);
+        ArrayList<Sensor> sensors = mSensorsMap.get(address);
+        if (sensors != null) {
+            for (Sensor sensor : sensors) {
+                if (sensor != null) {
+                    sensor.disable();
+                }
+            }
+        }
+        mSensorsMap.remove(address);
+
+        if (outputDebug) {
+            writeToDebugCSV(address + "," + "closeDevice()");
+        }
     }
 
     /**
@@ -325,7 +411,7 @@ public class BluetoothLeService extends Service {
      */
     public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic, boolean enabled, String address) {
         if (mBluetoothAdapter == null || !mBluetoothGattMap.containsKey(address)) {
-            Log.w(TAG, "BluetoothAdapter not initialized or GATT does not exist");
+            Log.w(TAG, address + ": setCharacteristicNotification - BluetoothAdapter not initialized or GATT does not exist");
             return;
         }
         mBluetoothGattMap.get(address).setCharacteristicNotification(characteristic, enabled); // Enabled locally.
@@ -336,7 +422,7 @@ public class BluetoothLeService extends Service {
      */
     public void writeDescriptor(BluetoothGattCharacteristic characteristic, String address) {
         if (mBluetoothAdapter == null || !mBluetoothGattMap.containsKey(address)) {
-            Log.w(TAG, "BluetoothAdapter not initialized or GATT does not exist");
+            Log.w(TAG, address + ": writeDescriptor - BluetoothAdapter not initialized or GATT does not exist");
             return;
         }
         BluetoothGattDescriptor clientConfig = characteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"));
@@ -352,7 +438,7 @@ public class BluetoothLeService extends Service {
      */
     public List<BluetoothGattService> getSupportedGattServices(String address) {
         if (mBluetoothAdapter == null || !mBluetoothGattMap.containsKey(address)) {
-            Log.w(TAG, "BluetoothAdapter not initialized or GATT does not exist");
+            Log.w(TAG,  address + ": getSupportedGattServices - BluetoothAdapter not initialized or GATT does not exist");
             return null;
         }
 
@@ -364,17 +450,31 @@ public class BluetoothLeService extends Service {
      */
     public BluetoothGattService getService(UUID servUuid, String address) {
         if (mBluetoothAdapter == null || !mBluetoothGattMap.containsKey(address)) {
-            Log.w(TAG, "BluetoothAdapter not initialized or GATT does not exist");
+            Log.w(TAG,  address + ": getService: BluetoothAdapter not initialized or GATT does not exist");
             return null;
         }
         return mBluetoothGattMap.get(address).getService(servUuid);
     }
 
-
     //CW: Subsequent sections deal with background scanning and connection to pre-defined BLE sensortags
     private Runnable mStartAutomaticRunnable = new Runnable() {
         @Override
         public void run() {
+            //first check whether there are inactive sensortags that needs to be disconnected
+            checkSensorTagInactivity();
+
+            //write to CSV at fixed intervals
+            if ((new Date()).getTime() - mFileLastWriteTime.getTime() > CSV_WRITE_INTERVAL) {
+                writeToCSV();
+                mFileLastWriteTime = new Date();
+            }
+
+            //check whether CSV file is due for renewal
+            if ((new Date()).getTime() - mFileCreatedTime.getTime() > FILE_SPLIT_INTERVAL) {
+                createNewCSVFile();
+            }
+
+            //next begin to scan for advertising sensortags
             startAutomaticScan();
         }
     };
@@ -390,6 +490,9 @@ public class BluetoothLeService extends Service {
         //Toast.makeText(this, "Scanning", Toast.LENGTH_SHORT).show();
         //writeToCSV("Scheduled Bluetooth scan started.");
         Log.d(TAG, "Scheduled Bluetooth scan started.");
+        if (outputDebug) {
+            writeToDebugCSV("NA," + "startAutomaticScan()");
+        }
         //Scan for Bluetooth devices with specified MAC
         //noinspection deprecation
         mBluetoothAdapter.startLeScan(mLeScanCallback);
@@ -400,6 +503,9 @@ public class BluetoothLeService extends Service {
         //Toast.makeText(this, "Not Scanning", Toast.LENGTH_SHORT).show();
         //writeToCSV("Scheduled Bluetooth scan stopped.");
         Log.d(TAG, "Scheduled Bluetooth scan stopped.");
+        if (outputDebug) {
+            writeToDebugCSV("NA," + "stopAutomaticScan()");
+        }
         //noinspection deprecation
         mBluetoothAdapter.stopLeScan(mLeScanCallback);
         if (isAutomaticMode) {
@@ -416,39 +522,103 @@ public class BluetoothLeService extends Service {
             //prevent any previously scheduled scan from starting
             //writeToCSV("Automatic mode stopped.");
             Log.d(TAG, "Automatic mode stopped.");
+            if (outputDebug) {
+                writeToDebugCSV("NA," + "setAutomaticMode(false)");
+            }
+            writeToCSV();
             stopAutomaticScan();
-            writer.flushQuietly();
-            try {
-                writer.close();
-            } catch (IOException e) {
-                //unable to close csv file
-                e.printStackTrace();
+            if (writer != null) {
+                try {
+                    writer.flush();
+                    writer.close();
+                } catch (IOException e) {
+                    //unable to close csv file
+                    e.printStackTrace();
+                }
             }
             mHandler.removeCallbacks(mStartAutomaticRunnable);
+
+            //remove foreground notification
+            stopForeground(true);
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+            prefs.edit().putBoolean("automaticModeEnabled", false).commit();
+
 
             disconnect();
             close();
 
         } else {
-            //automatic mode enabled
-            csvFile = new File(csvPath, "sensortag_debug_" + getCurrentTimeStampForFilename() + ".csv");
-            try {
-                if (writer != null) {
-                    writer.close();
+
+            if (outputDebug) {
+                debugFile = new File(csvPath, "sensortag_debug_" + getCurrentTimeStampForFilename() + ".csv");
+                try {
+                    if (debugWriter != null) {
+                        debugWriter.close();
+                    }
+                    debugWriter = new CSVWriter(new FileWriter(debugFile, false)); //set true to append, false to overwrite file
+
+                } catch (IOException e) {
+                    //unable to create/write to csv file
+                    e.printStackTrace();
+                    Log.e(TAG, "Unable to create output csv file.");
                 }
-                writer = new CSVWriter(new FileWriter(csvFile, false)); //set true to append, false to overwrite file
-            } catch (IOException e) {
-                //unable to create/write to csv file
-                e.printStackTrace();
-                Log.e(TAG, "Unable to create output csv file.");
             }
 
+            if (outputDebug) {
+                writeToDebugCSV("NA," + "setAutomaticMode(true)");
+            }
+
+            //create new CSV file
+            createNewCSVFile();
+            mFileLastWriteTime = new Date();
+
             //populate target devices hashmap
-            bleTargetDevicesMap = loadMap();
+            mBluetoothTargetDevicesMap = loadMap();
 
             //writeToCSV("Automatic mode started.");
             Log.d(TAG, "Automatic mode started.");
             startAutomaticScan();
+
+            Notification.Builder builder = new Notification.Builder(this.getApplicationContext());
+
+            Intent intent = new Intent(this.getApplicationContext(), BluetoothLeService.class);
+            PendingIntent pendingIntent
+                    = PendingIntent.getActivity(this.getApplicationContext(), 0, intent, 0);
+
+            Notification notification = builder
+                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setContentTitle("SensorTagTI Data Capture")
+                    .setContentText("Automatic Mode Enabled")
+                    .setContentInfo("ContentInfo")
+                    .setAutoCancel(true)
+                    .build();
+
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+            prefs.edit().putBoolean("automaticModeEnabled", true).commit();
+
+            startForeground(54330216, notification);
+        }
+    }
+
+    private void createNewCSVFile() {
+        //automatic mode enabled
+
+        csvFile = new File(csvPath, "sensortag_datacapture_" + getCurrentTimeStampForFilename() + ".csv");
+        try {
+            if (writer != null) {
+                writer.close();
+            }
+            writer = new CSVWriter(new FileWriter(csvFile, false)); //set true to append, false to overwrite file
+            mFileCreatedTime = new Date();
+
+            if (outputDebug) {
+                writeToDebugCSV("NA," + "createNewCSVFile()");
+            }
+
+        } catch (IOException e) {
+            //unable to create/write to csv file
+            e.printStackTrace();
+            Log.e(TAG, "Unable to create output csv file.");
         }
     }
 
@@ -475,63 +645,72 @@ public class BluetoothLeService extends Service {
 
     public void connectDevice(BluetoothDevice device) {
 
-        if (isAutomaticMode && bleTargetDevicesMap.containsKey(device.getAddress())) {
-            if (!bleDeviceMap.containsKey(device.getAddress()) && connect(device.getAddress())) {
-                // Add the device to the adapter.
-                bleDeviceMap.put(device.getAddress(), device);
+        if (isAutomaticMode && mBluetoothTargetDevicesMap.containsKey(device.getAddress())) {
+            if (connect(device.getAddress())) {
                 Log.d(TAG, "New SensorTag connected - " + device.getAddress());
             }
         }
     }
 
     public void createSensors(BluetoothDevice device) {
-        //latestSensorReadingMap.clear();
-
-        if (isAutomaticMode && bleTargetDevicesMap.containsKey(device.getAddress())) {
-
-            Sensor sensor = null;
+        if (isAutomaticMode && mBluetoothTargetDevicesMap.containsKey(device.getAddress())) {
+            ArrayList<Sensor> sensors = new ArrayList<Sensor>();
             String address = device.getAddress();
+
             for (BluetoothGattService service : getSupportedGattServices(address)) {
-                Log.d(TAG, "GATT Service UUID - " + service.getUuid().toString() + " - " + address);
-
-                if (bleTargetDevicesMap.get(address).getSensorType() == SensorTagConfiguration.SensorType.TEMPERATURE && "f000aa00-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
-                    sensor = new IRTSensor(service.getUuid(), this, address);
-                    Log.d(TAG, "New IRT sensor created - " + address);
-                } else if (bleTargetDevicesMap.get(address).getSensorType() == SensorTagConfiguration.SensorType.HUMIDITY && "f000aa20-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
-                    sensor = new HumiditySensor(service.getUuid(), this, address);
-                    Log.d(TAG, "New humidity sensor created - " + address);
-                } else if (bleTargetDevicesMap.get(address).getSensorType() == SensorTagConfiguration.SensorType.PRESSURE && "f000aa40-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
-                    sensor = new BarometerSensor(service.getUuid(), this, address);
-                    Log.d(TAG, "New barometer sensor created - " + address);
-                } else if (bleTargetDevicesMap.get(address).getSensorType() == SensorTagConfiguration.SensorType.BRIGHTNESS && "f000aa70-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
-                    sensor = new LuxometerSensor(service.getUuid(), this, address);
-                    Log.d(TAG, "New luxometer sensor created - " + address);
-                } else if (bleTargetDevicesMap.get(address).getSensorType() == SensorTagConfiguration.SensorType.MOTION && "f000aa80-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
-                    sensor = new MotionSensor(service.getUuid(), this, address);
-                    Log.d(TAG, "New motion sensor created - " + address);
+                Sensor sensor = null;
+                for (SensorTagConfiguration.SensorType sensorType : mBluetoothTargetDevicesMap.get(address).getSensorTypes()) {
+                    Log.d(TAG, "GATT Service UUID - " + service.getUuid().toString() + " - " + address);
+                    if (sensorType == SensorTagConfiguration.SensorType.TEMPERATURE && "f000aa00-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
+                        sensor = new IRTSensor(service.getUuid(), this, address);
+                        Log.d(TAG, "New IRT sensor created - " + address);
+                    } else if (sensorType == SensorTagConfiguration.SensorType.HUMIDITY && "f000aa20-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
+                        sensor = new HumiditySensor(service.getUuid(), this, address);
+                        Log.d(TAG, "New humidity sensor created - " + address);
+                    } else if (sensorType == SensorTagConfiguration.SensorType.PRESSURE && "f000aa40-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
+                        sensor = new BarometerSensor(service.getUuid(), this, address);
+                        Log.d(TAG, "New barometer sensor created - " + address);
+                    } else if (sensorType == SensorTagConfiguration.SensorType.BRIGHTNESS && "f000aa70-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
+                        sensor = new LuxometerSensor(service.getUuid(), this, address);
+                        Log.d(TAG, "New luxometer sensor created - " + address);
+                    } else if (sensorType == SensorTagConfiguration.SensorType.MOTION && "f000aa80-0451-4000-b000-000000000000".equals(service.getUuid().toString())) {
+                        sensor = new MotionSensor(service.getUuid(), this, address);
+                        Log.d(TAG, "New motion sensor created - " + address);
+                    }
                 }
+                if (sensor != null) {
+                    sensors.add(sensor);
 
+                    if (outputDebug) {
+                        writeToDebugCSV(address + "," + "createSensors() - " + sensor.getSensorType());
+                    }
+                }
             }
-            if (sensor != null) {
-                sensors.put(address, sensor);
-            }
+
+            mSensorsMap.put(address, sensors);
         }
     }
 
     private void updateSensorReading(byte[] value, String deviceAddress) {
 
         if (isAutomaticMode) {
-            Sensor s = sensors.get(deviceAddress);
-            s.convert(value);
 
-            //for debugging/display purposes only
-            s.getStatus().setLatestReading(s.toString());
-            s.getStatus().setLatestReadingTimestamp(getCurrentShortTimeStamp());
-            s.getStatus().incrementReadingsCount();
+            ArrayList<Sensor> sensors = mSensorsMap.get(deviceAddress);
+            if (sensors != null) {
+                for (Sensor s : sensors) {
+                    s.receiveNotification();
+                    s.convert(value);
+                    //for debugging/display purposes only
+                    s.getStatus().setLatestReading(s.toString());
+                    s.getStatus().setLatestReadingTimestamp(new Date());
+                    s.getStatus().incrementReadingsCount();
 
-            String output = deviceAddress + "," + s.toString();
-            Log.d(TAG, output);
-            writeToCSV(output);
+                    String output = deviceAddress + "," + s.toString();
+                    Log.d(TAG, output);
+                    //writeToCSV(output);
+                    addToCSVBuffer(output);
+                }
+            }
             //latestSensorReadingMap.put(deviceAddress,s.toString());
         }
     }
@@ -544,7 +723,7 @@ public class BluetoothLeService extends Service {
             outputMap = (HashMap<String, SensorTagConfiguration>) is.readObject();
             Log.d(TAG, "Verifying config data");
             for (String key : outputMap.keySet()) {
-                Log.d(TAG, key + " - " + outputMap.get(key).getSensorType());
+                Log.d(TAG, key + " - " + outputMap.get(key).getSensorTypes());
             }
             is.close();
             fis.close();
@@ -556,17 +735,42 @@ public class BluetoothLeService extends Service {
         return outputMap;
     }
 
-    private void writeToCSV(String s) {
+    private void addToCSVBuffer(String s) {
+        s = getCurrentTimeStamp() + "," + s;
+        csvBuffer.add(s);
+    }
+
+    private void writeToCSV() {
+
+        ArrayList<String> outputBuffer = csvBuffer;
+        csvBuffer = new ArrayList<String>();
+
         if (writer != null) {
-            s = getCurrentTimeStamp() + "," + s;
-            writer.writeNext(s.split(","));
+            for (String line : outputBuffer) {
+                writer.writeNext(line.split(","));
+            }
             try {
                 writer.flush();
+                outputBuffer.clear();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
+
+
+    private void writeToDebugCSV(String s) {
+        if (debugWriter != null) {
+            s = getCurrentTimeStamp() + "," + s;
+            debugWriter.writeNext(s.split(","));
+            try {
+                debugWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     public boolean isAutomaticMode() {
         return isAutomaticMode;
@@ -574,15 +778,65 @@ public class BluetoothLeService extends Service {
 
     public ArrayList<String> getStatusUpdates() {
         ArrayList<String> statusUpdates = new ArrayList<String>();
-        statusUpdates.add(bleDeviceMap.size() + " SensorTags connected this session.");
-        for (BluetoothDevice device : bleDeviceMap.values()) {
-            Sensor s = sensors.get(device.getAddress());
-            statusUpdates.add(device.getAddress() + " - " + bleTargetDevicesMap.get(device.getAddress()).getSensorType());
-            statusUpdates.add(device.getAddress() + " - Updated: " + s.getStatus().getLatestReadingTimestamp());
-            statusUpdates.add(device.getAddress() + " - Total Readings: " + s.getStatus().getReadingsCount());
+        statusUpdates.add(mBluetoothDeviceMap.size() + " SensorTags connected.");
+        for (BluetoothDevice device : mBluetoothDeviceMap.values()) {
+            ArrayList<Sensor> sensors = mSensorsMap.get(device.getAddress());
+            if (sensors != null) {
+                for (Sensor s : sensors) {
+                    statusUpdates.add("Device: " + device.getAddress());
+                    statusUpdates.add("Type: " + s.getSensorType());
+                    statusUpdates.add("Updated: " + s.getStatus().getLatestReadingTimestampString());
+                    statusUpdates.add("Total Readings: " + s.getStatus().getReadingsCount());
+                }
+            }
         }
         return statusUpdates;
     }
+
+    public void checkSensorTagInactivity() {
+
+        if (outputDebug) {
+            writeToDebugCSV("NA," + "checkSensorTagInactivity()");
+        }
+
+        Date currentTime = new Date();
+        ArrayList<String> inactiveDevices = new ArrayList<String>();
+        for (String address : mBluetoothDeviceMap.keySet()) {
+            boolean inactive = false;
+
+            ArrayList<Sensor> sensors = mSensorsMap.get(address);
+            if (sensors != null) {
+                for (Sensor sensor : sensors) {
+                    if (sensor != null) {
+                        Date lastUpdated = sensor.getStatus().getLatestReadingTimestamp();
+                        if (currentTime.getTime() - lastUpdated.getTime() > SENSOR_INACTIVITY_THRESHOLD) {
+                            //check if the last updated time has elapsed by more than the threshold
+                            if (outputDebug) {
+                                writeToDebugCSV(address + "," + "SensorTag Inactive," + getCurrentShortTimeStamp(currentTime) + "," + getCurrentShortTimeStamp(lastUpdated));
+                            }
+                            inactive = true;
+                            break;
+                        }
+                    } else {
+                        //unlikely to be null since we created it previously.
+                        //but set to inactive as a failsafe if it does occur so we can reconnect properly
+                        inactive = true;
+                    }
+                }
+            }
+            if (inactive) {
+                inactiveDevices.add(address);
+            }
+        }
+
+        for (String address : inactiveDevices) {
+            //close the bluetooth connection if sensortag has been inactive beyond desired threshold
+            //upon closing, the sensortag should enter advertising mode, giving us the chance to reconnect to it
+            disconnectDevice(address);
+            closeDevice(address);
+        }
+    }
+
 
     public String getCurrentTimeStamp() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
@@ -590,6 +844,10 @@ public class BluetoothLeService extends Service {
 
     public String getCurrentShortTimeStamp() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+    }
+
+    public String getCurrentShortTimeStamp(Date date) {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
     }
 
     public String getCurrentTimeStampForFilename() {

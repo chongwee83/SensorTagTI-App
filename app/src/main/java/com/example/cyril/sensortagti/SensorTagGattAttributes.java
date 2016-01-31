@@ -175,11 +175,12 @@ public class SensorTagGattAttributes
      */
     public static byte optimalPeriod(String serviceUuid)
     {
-        if(serviceUuid.equals(UUID_IRT_SERV))return 10;
-        else if(serviceUuid.equals(UUID_HUM_SERV))return 10;
-        else if(serviceUuid.equals(UUID_BAR_SERV))return 10;
-        else if(serviceUuid.equals(UUID_OPT_SERV))return 10;
-        else if(serviceUuid.equals(UUID_MOV_SERV))return 10;
+        //CW: Cyril's value 10 for all services
+        if(serviceUuid.equals(UUID_IRT_SERV))return 100;
+        else if(serviceUuid.equals(UUID_HUM_SERV))return 100;
+        else if(serviceUuid.equals(UUID_BAR_SERV))return 100;
+        else if(serviceUuid.equals(UUID_OPT_SERV))return 100;
+        else if(serviceUuid.equals(UUID_MOV_SERV))return 20;
         else return 0;
     }
 

@@ -15,6 +15,7 @@ public class LuxometerSensor extends Sensor
     {
         super(serviceUuid,mBluetoothLeService,address);
         this.luxvalue=0.0;
+        this.setSensorType(SensorTagConfiguration.SensorType.BRIGHTNESS);
     }
 
     @Override

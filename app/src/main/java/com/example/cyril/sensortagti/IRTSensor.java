@@ -19,6 +19,7 @@ public class IRTSensor extends Sensor
         this.ambient=0.0;
         this.objectOld=0.0;
         this.objectNew=0.0;
+        this.setSensorType(SensorTagConfiguration.SensorType.TEMPERATURE);
     }
 
     @Override

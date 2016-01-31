@@ -29,6 +29,7 @@ public abstract class Sensor
     // Special for motion sensor.
     public int measure; //1=acc,2=gyr,3=mag
     // Check for a received notification every second.
+    private SensorTagConfiguration.SensorType sensorType;
 
     private Handler handler;
     private boolean wasNotified;
@@ -41,14 +42,16 @@ public abstract class Sensor
             {
                 if(!wasNotified)
                 {
-                    Log.w(TAG,"no notifications");
+                    Log.w(TAG,mBluetoothLeDeviceAddress + ": No notifications received in last period");
                     turnOnService();
-                    unableNotifications();
+                    enableNotifications();
                 }
                 else
-                    Log.w(TAG,"notifications");
+                    Log.w(TAG,mBluetoothLeDeviceAddress + ": Notifications received in last period");
                 wasNotified=false;
-                handler.postDelayed(this,1000);
+
+                handler.postDelayed(this,3000); //changed to 5 seconds since sensor periods were increased to 1 second
+
             }
         },1000);
     }
@@ -64,7 +67,6 @@ public abstract class Sensor
      */
     public void disable()
     {
-        //CW: Not sure if needed since we're moving away from buffering and downloading sensor readings
         this.handler.removeCallbacksAndMessages(null);
     }
 
@@ -85,8 +87,8 @@ public abstract class Sensor
         turnOnService();
         if(!this.wasInitialized)
             return;
-        // Unable this sensor's notifications.
-        unableNotifications();
+        // Enable this sensor's notifications.
+        enableNotifications();
         // Set this sensor's period.
         setPeriod();
 
@@ -110,6 +112,7 @@ public abstract class Sensor
         configCharacteristic.setValue(new byte[]{1});
         // Special case: Movement
         if("f000aa80-0451-4000-b000-000000000000".equals(this.serviceUuid.toString()))
+            //configCharacteristic.setValue(new byte[] {0x7F,0x02});
             configCharacteristic.setValue(new byte[] {0x7F,0x02});
         this.mBluetoothLeService.writeCharacteristic(configCharacteristic,mBluetoothLeDeviceAddress);
         try {
@@ -123,7 +126,7 @@ public abstract class Sensor
     /**
      * Unable this sensor's notifications.
      */
-    public void unableNotifications()
+    public void enableNotifications()
     {
         BluetoothGattService service=this.mBluetoothLeService.getService(this.serviceUuid,mBluetoothLeDeviceAddress);
         if(service==null)return;
@@ -201,5 +204,13 @@ public abstract class Sensor
 
     public void setStatus(SensorStatus status) {
         this.status = status;
+    }
+
+    public SensorTagConfiguration.SensorType getSensorType() {
+        return sensorType;
+    }
+
+    public void setSensorType(SensorTagConfiguration.SensorType sensorType) {
+        this.sensorType = sensorType;
     }
 }

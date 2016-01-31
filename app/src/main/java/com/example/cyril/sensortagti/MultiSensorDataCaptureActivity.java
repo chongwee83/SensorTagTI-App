@@ -54,8 +54,6 @@ public class MultiSensorDataCaptureActivity extends Activity {
     private HashMap<String, Integer> uuidToIndex = new HashMap<>(); // dataUuid to index
     private HashMap<String, SensorTagConfiguration> bleDeviceConfigMap = new HashMap<String, SensorTagConfiguration>();
     private HashMap<String, String> latestSensorReadingMap = new HashMap<String, String>();
-    private TextView txtView;
-    private EditText editText;
 
     //CW
     private BluetoothLeService mBluetoothLeService;
@@ -85,9 +83,6 @@ public class MultiSensorDataCaptureActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_multi_sensor_datacapture);
-
-        txtView = (TextView) findViewById(R.id.outputTextView);
-        editText = (EditText) findViewById(R.id.configMultiLineText);
 
         mHandler = new Handler();
         // Use this check to determine whether BLE is supported on the device.  Then you can
@@ -127,18 +122,59 @@ public class MultiSensorDataCaptureActivity extends Activity {
     public void resetConfiguration(View v) {
         saveMap(new HashMap<String, SensorTagConfiguration>());
         bleDeviceConfigMap = loadMap();
-        refreshConfigMultiLineText();
+        //refreshConfigMultiLineText();
+    }
+
+    public void displayConfiguration(View v) {
+
+        String configText = "";
+        for (Map.Entry entry : bleDeviceConfigMap.entrySet()) {
+            String address = (String) entry.getKey();
+            SensorTagConfiguration config = (SensorTagConfiguration) entry.getValue();
+            configText = configText + address + " - \n" + config.getSensorTypes() + "\n";
+        }
+
+        AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+        alertDialog.setTitle("SensorTag Configuration");
+        alertDialog.setMessage(configText);
+        alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+        alertDialog.show();
     }
 
     public void showLatestStatus(View v) {
+
+        String updateText = "";
+        AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+
+
         if (mBluetoothLeService.isAutomaticMode()) {
-            txtView.setText("Automatic Mode Enabled");
+            //txtView.setText("Automatic Mode Enabled");
+            alertDialog.setTitle("Automatic Mode Enabled");
             for (String update : mBluetoothLeService.getStatusUpdates()) {
-                txtView.setText(txtView.getText() + "\n" + update);
+                //txtView.setText(txtView.getText() + "\n" + update);
+                updateText = updateText + "\n" + update;
             }
         } else {
-            txtView.setText("Automatic Mode Disabled");
+            //txtView.setText("Automatic Mode Disabled");
+            alertDialog.setTitle("Automatic Mode Disabled");
+            updateText = "Automatic Mode is currently not running.";
         }
+
+
+        alertDialog.setMessage(updateText);
+        alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+        alertDialog.show();
+
 
     }
 
@@ -153,20 +189,21 @@ public class MultiSensorDataCaptureActivity extends Activity {
         }
         // Read configuration file
         bleDeviceConfigMap = loadMap();
-        refreshConfigMultiLineText();
+        //refreshConfigMultiLineText();
 
         // Register for the BroadcastReceiver.
-        registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        //registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
     }
 
+    /*
     public void refreshConfigMultiLineText() {
         editText.setText("");
         for (Map.Entry entry : bleDeviceConfigMap.entrySet()) {
             String address = (String) entry.getKey();
             SensorTagConfiguration config = (SensorTagConfiguration) entry.getValue();
-            editText.setText(editText.getText() + address + " - " + config.getSensorType() + "\n");
+            editText.setText(editText.getText() + address + " - " + config.getSensorTypes() + "\n");
         }
-    }
+    }*/
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -233,37 +270,119 @@ public class MultiSensorDataCaptureActivity extends Activity {
     private void addConfiguration(BluetoothDevice device) {
         //Display dialog for user to select desired sensortype
         final String address = device.getAddress();
+        showMultiSelectDialog(address);
+
+        /*
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Select Desired Sensor Type (" + address + ")");
         CharSequence options[] = new CharSequence[]{"Motion", "Brightness", "Humidity", "Temperature", "Pressure", "Cancel and Exit"};
         builder.setItems(options, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int index) {
+                SensorTagConfiguration config = new SensorTagConfiguration();
                 switch (index) {
                     case 0:
-                        bleDeviceConfigMap.put(address, new SensorTagConfiguration(SensorTagConfiguration.SensorType.MOTION));
+                        config.addSensorType(SensorTagConfiguration.SensorType.MOTION);
                         break;
                     case 1:
-                        bleDeviceConfigMap.put(address, new SensorTagConfiguration(SensorTagConfiguration.SensorType.BRIGHTNESS));
+                        config.addSensorType(SensorTagConfiguration.SensorType.BRIGHTNESS);
                         break;
                     case 2:
-                        bleDeviceConfigMap.put(address, new SensorTagConfiguration(SensorTagConfiguration.SensorType.HUMIDITY));
+                        config.addSensorType(SensorTagConfiguration.SensorType.HUMIDITY);
                         break;
                     case 3:
-                        bleDeviceConfigMap.put(address, new SensorTagConfiguration(SensorTagConfiguration.SensorType.TEMPERATURE));
+                        config.addSensorType(SensorTagConfiguration.SensorType.TEMPERATURE);
                         break;
                     case 4:
-                        bleDeviceConfigMap.put(address, new SensorTagConfiguration(SensorTagConfiguration.SensorType.PRESSURE));
+                        config.addSensorType(SensorTagConfiguration.SensorType.PRESSURE);
                         break;
                     case 5:
                         break;
+                }
+                if (!config.getSensorTypes().isEmpty()) {
+                    bleDeviceConfigMap.put(address, config);
                 }
                 saveMap(bleDeviceConfigMap);
                 refreshConfigMultiLineText();
             }
         });
         builder.show();
+        */
     }
+
+    private void showMultiSelectDialog(String devAddress){
+        final CharSequence[] items = {"Motion", "Brightness", "Humidity", "Temperature", "Pressure"};
+
+        final String address = devAddress;
+
+        // arraylist to keep the selected items
+        final ArrayList<Integer> selectedItems=new ArrayList<Integer>();
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Select Desired Sensor Type (" + address + ")");
+        builder.setMultiChoiceItems(items, null,
+                new DialogInterface.OnMultiChoiceClickListener() {
+                    // indexSelected contains the index of item (of which checkbox checked)
+                    @Override
+                    public void onClick(DialogInterface dialog, int indexSelected, boolean isChecked) {
+                        if (isChecked) {
+                            // If the user checked the item, add it to the selected items
+                            // write your code when user checked the checkbox
+                            selectedItems.add(indexSelected);
+                        } else if (selectedItems.contains(indexSelected)) {
+                            // Else, if the item is already in the array, remove it
+                            // write your code when user Unchecked the checkbox
+                            selectedItems.remove(Integer.valueOf(indexSelected));
+                        }
+                    }
+                })
+                // Set the action buttons
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        //  Your code when user clicked on OK
+                        //  You can write the code to save the selected item here
+                        SensorTagConfiguration config = new SensorTagConfiguration();
+                        for (Integer selected : selectedItems) {
+                            switch (selected.intValue()) {
+                                case 0:
+                                    config.addSensorType(SensorTagConfiguration.SensorType.MOTION);
+                                    break;
+                                case 1:
+                                    config.addSensorType(SensorTagConfiguration.SensorType.BRIGHTNESS);
+                                    break;
+                                case 2:
+                                    config.addSensorType(SensorTagConfiguration.SensorType.HUMIDITY);
+                                    break;
+                                case 3:
+                                    config.addSensorType(SensorTagConfiguration.SensorType.TEMPERATURE);
+                                    break;
+                                case 4:
+                                    config.addSensorType(SensorTagConfiguration.SensorType.PRESSURE);
+                                    break;
+                                case 5:
+                                    break;
+                            }
+                        }
+                        if (!config.getSensorTypes().isEmpty()) {
+                            bleDeviceConfigMap.put(address, config);
+                        }
+                        saveMap(bleDeviceConfigMap);
+                        //refreshConfigMultiLineText();
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        //  Your code when user clicked on Cancel
+
+                    }
+                });
+
+        AlertDialog dialog = builder.create();//AlertDialog dialog; create like this outside onClick
+        dialog.show();
+    }
+
 
     private void saveMap(Map<String, SensorTagConfiguration> inputMap) {
         try {
@@ -293,7 +412,7 @@ public class MultiSensorDataCaptureActivity extends Activity {
         return outputMap;
     }
 
-
+/*
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -311,13 +430,14 @@ public class MultiSensorDataCaptureActivity extends Activity {
             }
         }
     };
-
+*/
+    /*
     private void displayLatestReadings() {
         txtView.setText("Sensor Readings");
         for (Map.Entry<String, String> entry : latestSensorReadingMap.entrySet()) {
             txtView.append("\n" + "Device: " + entry.getKey() + " - Lux: " + entry.getValue());
         }
-    }
+    }*/
 
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();

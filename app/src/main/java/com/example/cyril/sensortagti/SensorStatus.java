@@ -1,12 +1,15 @@
 package com.example.cyril.sensortagti;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * Created by chongwee on 10/1/2016.
  */
 public class SensorStatus {
     private long readingsCount = 0;
     private String latestReading = "";
-    private String latestReadingTimestamp = "";
+    private Date latestReadingTimestamp = new Date();
 
     public long getReadingsCount() {
         return readingsCount;
@@ -29,11 +32,13 @@ public class SensorStatus {
         this.latestReading = latestReading;
     }
 
-    public String getLatestReadingTimestamp() {
+    public Date getLatestReadingTimestamp() {
         return latestReadingTimestamp;
     }
 
-    public void setLatestReadingTimestamp(String latestReadingTimestamp) {
+    public String getLatestReadingTimestampString() { return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(latestReadingTimestamp); }
+
+    public void setLatestReadingTimestamp(Date latestReadingTimestamp) {
         this.latestReadingTimestamp = latestReadingTimestamp;
     }
 }

@@ -14,6 +14,7 @@ public class HumiditySensor extends Sensor
     {
         super(serviceUuid,mBluetoothLeService,address);
         this.humidity=0.0;
+        this.setSensorType(SensorTagConfiguration.SensorType.HUMIDITY);
     }
 
     @Override
